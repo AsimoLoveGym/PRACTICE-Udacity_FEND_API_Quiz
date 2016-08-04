@@ -4,13 +4,41 @@ API Course, Lesson 1 -->
  <head>
  <!-- styles put here, but you can include a CSS file and reference it instead! -->
    <style type="text/css">
-     html, body { height: 100%; margin: 0; padding: 0; }
-     #map { height: 100%; }
+     html, body {
+       height: 100%; margin: 0; padding: 0;
+     }
+     #map {
+       bottom: 0px;
+       height: 100%;
+       left: 362px;
+       position: absolute;
+       right: 0px;
+     }
+
+     .options-box {
+       background: #fff;
+       border: 1px solid #999;
+       border-radius: 3px;
+       height: 100%;
+       line-height: 35px;
+       padding: 10px 10px 30px 10px;
+       text-align: left;
+       width: 340px;
+     }
    </style>
  </head>
  <body>
+   <div class="container">
+     <div class="options-box">
+       <h1>My frequent visited places</h1>
+       <div>
+         <input id="show-listings" type="button" value="Show Listings">
+         <input id="hide-listings" type="button" value="Hide Listings">
+       </div>
+     </div>
    <!-- TODO 1: Create a place to put the map in the HTML-->
-   <div id="map"></div>
+     <div id="map"></div>
+   </div>
    <script>
      // TODO: Create a map variable
      var map;
@@ -56,7 +84,8 @@ API Course, Lesson 1 -->
         var position = locations[i].location;
         var title = locations[i].title;
         var marker = new google.maps.Marker({
-          map: map,
+          // map: map,
+          // move to showListings or hideListings functions
           position: position,
           title: title,
           animation: google.maps.Animation.DROP,
@@ -72,7 +101,11 @@ API Course, Lesson 1 -->
           // 这个地方好像不简单，前面的单个的例子使用的仅仅就是infowindow.open(map, marker);
         });
       }
-      map.fitBounds(bounds);
+      // map.fitBounds(bounds);
+      // move to showListings or hideListings functions
+
+      document.getElementById('show-listings').addEventListener('click',showListings);
+      document.getElementById('hide-listings').addEventListener('click',hideListings);
      }
 
      function populateInfoWindow(marker, infowindow) {
@@ -86,7 +119,24 @@ API Course, Lesson 1 -->
          });
        }
      }
-     
+
+     function showListings(){
+       var bounds = new google.maps.LatLngBounds();
+       for (var i=0; i<markers.length; i++){
+         markers[i].setMap(map);
+        //  猜测跟Marker()里面的map: map是一样的东西
+         bounds.extend(markers[i].position);
+       }
+       map.fitBounds(bounds);
+     }
+
+     function hideListings(){
+       for (var i=0; i<markers.length; i++){
+         markers[i].setMap(null);
+        //  
+       }
+     }
+
    </script>
    <!--TODO: Load the JS API ASYNCHRONOUSLY below.-->
    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIfK3cRT0IIjE_8TZ7qGL07DSNTmfZmAw&v=3&callback=initMap">

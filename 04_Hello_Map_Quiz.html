@@ -49,6 +49,8 @@ API Course, Lesson 1 -->
       ];
 
       var largeInfowindow = new google.maps.InfoWindow();
+      var bounds = new google.maps.LatLngBounds();
+      // 明白了,bounds会把markers都囊括进来。为何并没有感觉到有什么区别？
 
       for (var i = 0; i < locations.length; i++){
         var position = locations[i].location;
@@ -62,11 +64,15 @@ API Course, Lesson 1 -->
         });
 
         markers.push(marker);
+
+        bounds.extend(marker.position);
+
         marker.addListener('click',function(){
           populateInfoWindow(this, largeInfowindow);
           // 这个地方好像不简单，前面的单个的例子使用的仅仅就是infowindow.open(map, marker);
         });
       }
+      map.fitBounds(bounds);
 
       function populateInfoWindow(marker, infowindow) {
         if(infowindow.marker != marker){

@@ -73,22 +73,20 @@ API Course, Lesson 1 -->
         });
       }
       map.fitBounds(bounds);
-
-      function populateInfoWindow(marker, infowindow) {
-        if(infowindow.marker != marker){
-          infowindow.marker = marker;
-          infowindow.setContent('<div>' + marker.title + '</div>');
-          infowindow.open(map, marker);
-          infowindow.addListener('closeclick',function(){
-            // 这里使用的这个closeclick又是什么意思
-            infowindow.setMarker(null);
-          });
-        }
-      }
-
-
-
      }
+
+     function populateInfoWindow(marker, infowindow) {
+       if(infowindow.marker != marker){
+         infowindow.marker = marker;
+         infowindow.setContent('<div>' + marker.title + '</div>');
+         infowindow.open(map, marker);
+         infowindow.addListener('closeclick',function(){
+           // 这里使用的这个closeclick又是什么意思
+           infowindow.setMarker(null);
+         });
+       }
+     }
+     
    </script>
    <!--TODO: Load the JS API ASYNCHRONOUSLY below.-->
    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIfK3cRT0IIjE_8TZ7qGL07DSNTmfZmAw&v=3&callback=initMap">

@@ -25,6 +25,25 @@ API Course, Lesson 1 -->
        text-align: left;
        width: 340px;
      }
+
+     .text {
+       font-size: 12px;
+     }
+
+     #toggle-drawing {
+       width: 27%;
+       position: relative;
+       margin-left: 10px;
+     }
+
+     #zoom-to-area-text {
+       position: relative;
+       width: 70%;
+     }
+
+     #zoom-to-area {
+       width: 24%;
+     }
    </style>
  </head>
  <body>
@@ -34,6 +53,14 @@ API Course, Lesson 1 -->
        <div>
          <input id="show-listings" type="button" value="Show Listings">
          <input id="hide-listings" type="button" value="Hide Listings">
+         <hr>
+         <span class="text"> Draw a shape to search within it for homes!</span>
+         <input id="toggle-drawing" type="button" value="Drawing Tools">
+       </div>
+       <hr>
+       <div>
+         <input id="zoom-to-area-text" type="text" placeholder="What do you want to know in Chambana?">
+         <input id="zoom-to-area" type="button" value="Zoom">
        </div>
      </div>
    <!-- TODO 1: Create a place to put the map in the HTML-->
@@ -45,13 +72,20 @@ API Course, Lesson 1 -->
 
      var markers = [];
 
+     var polygon = null;
+
      // TODO: Complete the following function to initialize the map
      function initMap() {
+
+       var styles = [{"featureType":"all","elementType":"labels.text.fill","stylers":[{"color":"#ffffff"}]},{"featureType":"all","elementType":"labels.text.stroke","stylers":[{"color":"#000000"},{"lightness":13}]},{"featureType":"administrative","elementType":"geometry.fill","stylers":[{"color":"#000000"}]},{"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#144b53"},{"lightness":14},{"weight":1.4}]},{"featureType":"landscape","elementType":"all","stylers":[{"color":"#08304b"}]},{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#0c4152"},{"lightness":5}]},{"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#000000"}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#0b434f"},{"lightness":25}]},{"featureType":"road.arterial","elementType":"geometry.fill","stylers":[{"color":"#000000"}]},{"featureType":"road.arterial","elementType":"geometry.stroke","stylers":[{"color":"#0b3d51"},{"lightness":16}]},{"featureType":"road.local","elementType":"geometry","stylers":[{"color":"#000000"}]},{"featureType":"transit","elementType":"all","stylers":[{"color":"#146474"}]},{"featureType":"water","elementType":"all","stylers":[{"color":"#021019"}]}];
+
        // TODO: use a constructor to create a new map JS object. You can use the coordinates
        // we used, 40.7413549, -73.99802439999996 or your own!
        map = new google.maps.Map(document.getElementById('map'),{
          center: {lat: 40.115634,lng: -88.236542},
-         zoom: 13
+         zoom: 13,
+         styles: styles,
+         mapTypeControl: false
        });
       // var tribeca = {lat: 40.115634,lng: -88.236542};
       // var marker = new google.maps.Marker({
@@ -77,8 +111,27 @@ API Course, Lesson 1 -->
       ];
 
       var largeInfowindow = new google.maps.InfoWindow();
+
+      var drawingManager = new google.maps.drawing.DrawingManager({
+        drawingMode: google.maps.drawing.OverlayType.POLYGON,
+        drawingControl: true,
+        drawingControlOptions: {
+          position: google.maps.ControlPosition.TOP_LEFT,
+          drawingModes: [
+            google.maps.drawing.OverlayType.POLYGON
+          ]
+        }
+
+      });
+
+      // Creat two new marker icons
+      var defaultIcon = makeMarkerIcon('0091ff');
+      var highlightedIcon = makeMarkerIcon('FFFF24');
+
       var bounds = new google.maps.LatLngBounds();
       // 明白了,bounds会把markers都囊括进来。为何并没有感觉到有什么区别？
+
+      var image = "image/map-marker-b.png";
 
       for (var i = 0; i < locations.length; i++){
         var position = locations[i].location;
@@ -89,6 +142,7 @@ API Course, Lesson 1 -->
           position: position,
           title: title,
           animation: google.maps.Animation.DROP,
+          icon: defaultIcon,
           id: i
         });
 
@@ -100,13 +154,48 @@ API Course, Lesson 1 -->
           populateInfoWindow(this, largeInfowindow);
           // 这个地方好像不简单，前面的单个的例子使用的仅仅就是infowindow.open(map, marker);
         });
+        // Add two listeners, one for mouseover, one for mouseout
+        marker.addListener('mouseover',function(){
+          this.setIcon(highlightedIcon);
+        });
+        marker.addListener('mouseout',function(){
+          this.setIcon(defaultIcon);
+        });
       }
       // map.fitBounds(bounds);
       // move to showListings or hideListings functions
 
       document.getElementById('show-listings').addEventListener('click',showListings);
       document.getElementById('hide-listings').addEventListener('click',hideListings);
+
+      document.getElementById('toggle-drawing').addEventListener('click',function(){
+        toggleDrawing(drawingManager);
+      });
+
+      document.getElementById('zoom-to-area').addEventListener('click',function(){
+        zoomToArea();
+      });
+
+      drawingManager.addListener('overlaycomplete',function(event){
+        if(polygon) {
+          polygon.setMap(null);
+          hideListings();
+        }
+        drawingManager.setDrawingMode(null);
+        polygon = event.overlay;
+        polygon.setEditable(true);
+        // Searching within the polygon
+        searchWithinPolygon();
+        // Make sure the search is re-done if the poly is changes.
+        polygon.getPath().addListener('set_at',searchWithinPolygon);
+        polygon.getPath().addListener('insert_at',searchWithinPolygon);
+
+        // var area = google.maps.geometry.spherical.computeArea(polygon.getPath());
+        // window.alert(area + "m2");
+      });
      }
+
+
 
      function populateInfoWindow(marker, infowindow) {
        if(infowindow.marker != marker){
@@ -133,13 +222,64 @@ API Course, Lesson 1 -->
      function hideListings(){
        for (var i=0; i<markers.length; i++){
          markers[i].setMap(null);
-        //  
+        //
+       }
+     }
+
+     function makeMarkerIcon(markerColor){
+       var markerImage = new google.maps.MarkerImage(
+         'http://chart.googleapis.com/chart?chst=d_map_spin&chld=1.15|0|'+ markerColor +
+         '|40|_|%E2%80%A2',
+         new google.maps.Size(21,34),
+         new google.maps.Point(0,0),
+         new google.maps.Point(10,34),
+         new google.maps.Size(21,34));
+       return markerImage;
+     }
+
+    //  This shows and hides (respectively) the drawing options
+
+     function toggleDrawing(drawingManager) {
+       if(drawingManager.map){
+         drawingManager.setMap(null);
+       } else {
+         drawingManager.setMap(map);
+       }
+     }
+
+     function searchWithinPolygon(){
+       for (var i=0; i<markers.length; i++){
+         if(google.maps.geometry.poly.containsLocation(markers[i].position,polygon)){
+           markers[i].setMap(map);
+         } else{
+           markers[i].setMap(null);
+         }
+       }
+     }
+
+     function zoomToArea(){
+       var geocoder = new google.maps.Geocoder();
+       var address = document.getElementById('zoom-to-area-text').value;
+       if (address == ''){
+         window.alert('You must enter an area, or address.');
+       } else{
+         geocoder.geocode(
+           { address: address,
+             componentRestrictions: {locality: 'Champaign'}
+           }, function(results, status) {
+             if(status == google.maps.GeocoderStatus.OK) {
+               map.setCenter(results[0].geometry.location);
+               map.setZoom(15);
+             } else{
+               window.alert("Location entered can't be found - try entering a more specific place.")
+             }
+           });
        }
      }
 
    </script>
    <!--TODO: Load the JS API ASYNCHRONOUSLY below.-->
-   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIfK3cRT0IIjE_8TZ7qGL07DSNTmfZmAw&v=3&callback=initMap">
+   <script async defer src="https://maps.googleapis.com/maps/api/js?libraries=geometry,drawing&key=AIzaSyBIfK3cRT0IIjE_8TZ7qGL07DSNTmfZmAw&v=3&callback=initMap">
    </script>
  </body>
 </html>
